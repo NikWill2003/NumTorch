@@ -94,27 +94,29 @@ unary_ufunc = {'relu': lambda test_inp, other_inps: (test_inp.relu()).sum(),
             'exp': lambda test_inp, other_inps: (test_inp.exp()).sum(),
             'sum': lambda test_inp, other_inps: test_inp.sum(),
             'mean': lambda test_inp, other_inps: test_inp.mean(),}
-                      
-for func_name, test_fn in unary_ufunc.items():
-    test_shape, other_shapes = (2, 3), [(3,2)]
-    input_bounds = (1, 10) if func_name == 'log' else (-5, 5)
-    all_close, log = test_fn_random_inputs(test_fn, test_shape, other_shapes, input_bounds=input_bounds)
-    print(f'function: {func_name} {'passed' if all_close else 'failed'}')
-    if not all_close:
-        print(log)
 
-for func_name, test_fn in matmul_fns.items():
-    test_shape = (2, 3) if func_name == 'matmul' else (3, 2)
-    other_shapes = [(3, 2)] if func_name == 'matmul' else [(2, 3)]
-    all_close, log = test_fn_random_inputs(test_fn, test_shape, other_shapes, input_bounds=input_bounds)
-    print(f'function: {func_name} {'passed' if all_close else 'failed'}')
-    if not all_close:
-        print(log)
+if __name__ == '__main__':
+      
+    for func_name, test_fn in unary_ufunc.items():
+        test_shape, other_shapes = (2, 3), [(3,2)]
+        input_bounds = (1, 10) if func_name == 'log' else (-5, 5)
+        all_close, log = test_fn_random_inputs(test_fn, test_shape, other_shapes, input_bounds=input_bounds)
+        print(f'function: {func_name} {'passed' if all_close else 'failed'}')
+        if not all_close:
+            print(log)
 
-for func_name, test_fn in bin_ufuncs.items():
-    test_shape, other_shapes = (2, 3), [(2,3)]
-    input_bounds = (1, 5) if (func_name == 'pow' or func_name == 'rpow') else (-5, 5)
-    all_close, log = test_fn_random_inputs(test_fn, test_shape, other_shapes, input_bounds=input_bounds)
-    print(f'function: {func_name} {'passed' if all_close else 'failed'}')
-    if not all_close:
-        print(log)
+    for func_name, test_fn in matmul_fns.items():
+        test_shape = (2, 3) if func_name == 'matmul' else (3, 2)
+        other_shapes = [(3, 2)] if func_name == 'matmul' else [(2, 3)]
+        all_close, log = test_fn_random_inputs(test_fn, test_shape, other_shapes, input_bounds=input_bounds)
+        print(f'function: {func_name} {'passed' if all_close else 'failed'}')
+        if not all_close:
+            print(log)
+
+    for func_name, test_fn in bin_ufuncs.items():
+        test_shape, other_shapes = (2, 3), [(2,3)]
+        input_bounds = (1, 5) if (func_name == 'pow' or func_name == 'rpow') else (-5, 5)
+        all_close, log = test_fn_random_inputs(test_fn, test_shape, other_shapes, input_bounds=input_bounds)
+        print(f'function: {func_name} {'passed' if all_close else 'failed'}')
+        if not all_close:
+            print(log)
