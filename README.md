@@ -2,7 +2,7 @@
 
 # TODO:
 - possibly work on the trainer class,
-- add in dropout, batch norm
+- add, batch norm
 - cli/file logging
 - finish off mnist example visulisation,
 - implement __getitem__ (look at slicing and indexing in more detail) and boolean ops
