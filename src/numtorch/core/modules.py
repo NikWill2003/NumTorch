@@ -1,36 +1,23 @@
-from tensor import Tensor
 import numpy as np
-from abc import ABC, abstractmethod
-from typing import Union, Tuple, Self, Iterable
+from typing import Iterable
+from abc import abstractmethod
 
-DTYPE = 'float64' 
-RNG = np.random.default_rng()
 
-class Parameter(Tensor):
-    def __init__(self, data):
-        super().__init__(data)
+from .tensor import Tensor, Parameter
+from ..config import Cfg, get_rng
+
+DTYPE = Cfg.dtype
+RNG = get_rng()
     
-    @classmethod
-    def kaiming(cls, fan_in, shape):
-        std = np.sqrt(2/fan_in)
-        weights = RNG.standard_normal(shape, dtype=DTYPE)*std
-        return cls(weights)
-    
-    @classmethod
-    def zeros(cls, shape):
-        return cls(np.zeros(shape, dtype=DTYPE))
-    
-    def __repr__(self) -> str:
-        return f'parameter shape: {self.shape}, size: {self.size}' 
-    
-class Module(ABC):
+
+class Module():
     
     def __call__(self, input: Tensor) -> Tensor:
         return self.forward(input)
     
     @property
-    def modules(self) -> list[Self]:
-        modules: list[Self] = []
+    def modules(self) -> list["Module"]:
+        modules: list[Module] = []
         for value in self.__dict__.values():
             if isinstance(value, Module):
                 modules.append(value)
@@ -63,6 +50,22 @@ class Module(ABC):
         for param in self.params:
             param.zero_grad()
 
+    def train(self) -> None:
+        for param in self.params:
+            param.requires_grad = True
+
+        for module in self.modules:
+            if isinstance(module, DynamicModule):
+                module.mode = 'train'
+        
+    def eval(self) -> None:
+        for param in self.params:
+            param.requires_grad = False
+
+        for module in self.modules:
+            if isinstance(module, DynamicModule):
+                module.mode = 'eval'
+
 class Sequential(Module):
     def __init__(self, layers):
         self.layers = layers
@@ -78,26 +81,34 @@ class Affine(Module):
         self.A = Parameter.kaiming(in_dim, (in_dim, out_dim))
         self.b = Parameter.zeros((out_dim))
 
-    def forward(self, x):
+    def forward(self, input: Tensor):
+        x = input
         # x: (B, in), A : (in, out), B: out
         return (x @ self.A) + self.b
 
 class Relu(Module):
-    def forward(self, x):
+    def forward(self, x: Tensor):
         return x.relu()
     
-class SoftMaxCrossEntropy():
-
-    def __call__(z: Tensor, y) -> Tensor:
-        '''logits z, shape (B, C), true lables y, shape (B, C)'''
-        loss = ((z * y).sum(axis=-1) + ((z.exp()).sum(axis=-1)).log()).mean()
-        return loss
-
-class SGD():
-    def __init__(self, params: list[Parameter], lr: float):
-        self.lr = lr
-        self.params = params
+class SoftMax(Module):
+    def forward(self, x: Tensor):
+        # temporary as max is not an implemented op
+        x = x - np.max(x.data, axis=-1, keepdims=True) # for numerical stability 
+        x = x.exp()
+        norm_c = x.sum(axis=-1, keepdims=True)
+        return x / norm_c
     
-    def step(self) -> None:
-        for param in self.params:
-            param.data += -self.lr * param.grad
+class DynamicModule(Module):
+    def __init__(self) -> None:
+        self.mode = 'train'
+
+class DropOut(DynamicModule):
+    def __init__(self, p):
+        self.mode = 'train'
+        self.p = p
+    
+    def forward(self, x: Tensor):
+        scale = 1/(1-self.p)
+        scaled_mask = RNG.choice([0,scale], size=x.size, p=[self.p, 1-self.p]).reshape(x.shape)
+
+        return (x * scaled_mask) 
