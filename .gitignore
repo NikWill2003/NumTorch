@@ -1,3 +1,4 @@
 datasets/
 .env
 wandb/
+__pycache__
